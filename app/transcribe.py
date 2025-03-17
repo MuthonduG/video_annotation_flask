@@ -15,8 +15,8 @@ def transcribe():
     else:
         return {"error": "Video path does not exist"}
 
+# Extracts audio from the video file and saves it to AUDIO_DIR.
 def video_audio_extraction():
-    """Extracts audio from the video file and saves it to AUDIO_DIR."""
     audio_filename = os.path.join(AUDIO_DIR, "ray_williams.wav")
     
     try:
@@ -31,8 +31,8 @@ def video_audio_extraction():
     except Exception as e:
         return {"error": f"Audio extraction failed: {str(e)}"}
 
+# Transcribes extracted audio using Whisper
 def audio_transcription(audio_path):
-    """Transcribes extracted audio using Whisper."""
     model = WhisperModel("small",  compute_type="float32")
     
     try:
@@ -48,8 +48,8 @@ def audio_transcription(audio_path):
     except Exception as e:
         return {"error": f"Transcription failed: {str(e)}"}
 
+# Runs the complete process: extract audio and transcribe it.
 def run():
-    """Runs the complete process: extract audio and transcribe it."""
     audio_path = video_audio_extraction()
     
     if isinstance(audio_path, dict) and "error" in audio_path:

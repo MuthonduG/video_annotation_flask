@@ -1,0 +1,5 @@
+ctranslate2
+ffmpeg-python
+faster_whisper
+flask
+

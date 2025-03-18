@@ -1,6 +1,6 @@
 from transcribe import video_audio_extraction, transcribe
 from pitch_analysis import tonal_analysis
-
+import numpy as np
 
 def segment_audio_with_tone():
     """Segments audio by integrating transcription with tonal variations."""

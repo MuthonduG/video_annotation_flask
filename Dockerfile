@@ -10,9 +10,11 @@ RUN apt-get update && apt-get install -y ffmpeg
 COPY requirements.txt requirements.txt
 
 # Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --default-timeout=600 --no-cache-dir -r requirements.txt
 
 # Copy the application code
+ENV PYTHONPATH=/app
+
 COPY . .
 
 # Expose the port

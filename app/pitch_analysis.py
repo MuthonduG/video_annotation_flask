@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import io
 from flask import Response
-from transcribe import video_audio_extraction  
+from app.transcribe import video_audio_extraction  
 
 def tonal_analysis():
     """Extracts pitch and loudness data from a video’s audio."""
@@ -12,28 +12,36 @@ def tonal_analysis():
 
     # Extract pitch using piptrack
     pitches, magnitudes = librosa.piptrack(y=y, sr=sr)
-    time = librosa.times_like(pitches, sr=sr)  
+    time = librosa.times_like(pitches[0], sr=sr)  # Ensure time axis matches pitch frames
 
     # Convert sparse pitch matrix to a single pitch array
-    non_zero_pitches = pitches[pitches > 0]  
-    average_pitch = np.mean(non_zero_pitches) if len(non_zero_pitches) > 0 else 0
+    pitch_values = []
+    pitch_times = []
+    
+    for i in range(pitches.shape[1]):  # Iterate over frames
+        pitch_col = pitches[:, i]
+        nonzero_pitch = pitch_col[pitch_col > 0]
+        if len(nonzero_pitch) > 0:
+            pitch_values.append(np.mean(nonzero_pitch))  # Use mean pitch per frame
+            pitch_times.append(time[i])  # Store corresponding time
+    
+    average_pitch = np.mean(pitch_values) if pitch_values else 0
 
     # Extract && compute loudness (RMS Energy)
     rms_waves = librosa.feature.rms(y=y)[0]
     rms_time = librosa.times_like(rms_waves, sr=sr)
 
-    return average_pitch, rms_waves, rms_time, non_zero_pitches, time, pitches
+    return average_pitch, rms_waves, rms_time, pitch_values, pitch_times
 
 def pitch_data_visualization():
     """Generates the tonal analysis plot and returns it as an in-memory image."""
-    average_pitch, rms_waves, rms_time, non_zero_pitches, time, pitches = tonal_analysis()
+    average_pitch, rms_waves, rms_time, pitch_values, pitch_times = tonal_analysis()
 
     # Create figure
     plt.figure(figsize=(12, 6))
 
     plt.subplot(2, 1, 1)
-    plt.plot(time, pitches.T, color='gray', alpha=0.5)
-    plt.scatter(time, non_zero_pitches, color='red', s=1, label="Pitch (Hz)")
+    plt.scatter(pitch_times, pitch_values, color='red', s=1, label="Pitch (Hz)")
     plt.title("Pitch Analysis")
     plt.xlabel("Time (s)")
     plt.ylabel("Frequency (Hz)")

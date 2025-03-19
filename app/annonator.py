@@ -1,15 +1,25 @@
-from transcribe import video_audio_extraction, transcribe
-from pitch_analysis import tonal_analysis
+from app.transcribe import video_audio_extraction, transcribe
+from app.pitch_analysis import tonal_analysis
 import numpy as np
+import json
 
 def segment_audio_with_tone():
     """Segments audio by integrating transcription with tonal variations."""
     audio_data = video_audio_extraction()
     if isinstance(audio_data, dict) and "error" in audio_data:
-        return audio_data  # Return error if extraction fails
+        return {"error": "Failed to extract audio"}  # Return a JSON-compatible error
 
-    avg_pitch, rms_energy = tonal_analysis(audio_data)
-    transcript_segments = transcribe(audio_data)
+    avg_pitch, rms_energy, *_ = tonal_analysis()
+    
+    transcript_segments = transcribe()
+    if isinstance(transcript_segments, str):
+        try:
+            transcript_segments = json.loads(transcript_segments)  # Convert string to Python list
+        except json.JSONDecodeError:
+            return {"error": "Invalid transcription format"}
+
+    if not isinstance(transcript_segments, list):  # Ensure it's a list of dicts
+        return {"error": "Unexpected transcription format"}
 
     # Define tone thresholds
     PITCH_THRESHOLD = 200  
@@ -18,13 +28,21 @@ def segment_audio_with_tone():
     labeled_segments = []
     
     for seg in transcript_segments:
-        start, end, text = seg["start"], seg["end"], seg["text"]
+        if not isinstance(seg, dict) or not all(k in seg for k in ["start", "end", "text"]):
+            continue  # Skip invalid segments
 
-        # Get average pitch & loudness for the time range
-        avg_seg_pitch = np.mean(avg_pitch[int(start):int(end)])
-        avg_seg_loudness = np.mean(rms_energy[int(start):int(end)])
+        try:
+            start, end, text = int(seg["start"]), int(seg["end"]), seg["text"]
+        except (ValueError, TypeError):
+            continue  # Skip if parsing fails
 
-        # Label based on tonal emphasis
+        # Ensure index range does not exceed the array length
+        if start >= len(avg_pitch) or end >= len(avg_pitch):
+            continue  
+
+        avg_seg_pitch = np.mean(avg_pitch[start:end]) if len(avg_pitch[start:end]) > 0 else 0
+        avg_seg_loudness = np.mean(rms_energy[start:end]) if len(rms_energy[start:end]) > 0 else 0
+
         label = "Emphasized Speech" if avg_seg_pitch > PITCH_THRESHOLD or avg_seg_loudness > LOUDNESS_THRESHOLD else "Normal Speech"
 
         labeled_segments.append({
